@@ -1,0 +1,96 @@
+<!-- templates/complaints/complaint_form.html -->
+{% extends "base.html" %}
+
+{% block title %}Raise Complaint — NagarikSetu{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-md-6">
+
+  <h3 class="mb-3">🏛 Raise a Complaint</h3>
+
+  <!-- GPS status banner -->
+  <div id="gps-status" class="alert alert-warning">
+    📍 Fetching your location...
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Hidden GPS fields — filled by JavaScript -->
+    <input type="hidden" name="latitude"  id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+
+    <!-- Issue type -->
+    <div class="mb-3">
+      <label class="form-label fw-bold">Issue Type</label>
+      {{ form.issue_type }}
+    </div>
+
+    <!-- Description -->
+    <div class="mb-3">
+      <label class="form-label fw-bold">Description</label>
+      {{ form.description }}
+    </div>
+
+    <!-- Photo -->
+    <div class="mb-3">
+      <label class="form-label fw-bold">📷 Photo</label>
+      {{ form.image }}
+    </div>
+
+    <!-- Submit — disabled until GPS confirmed -->
+    <button type="submit" id="submit-btn"
+            class="btn btn-success w-100" disabled>
+      Submit Complaint
+    </button>
+    <p class="text-muted small mt-2 text-center">
+      Button enables after GPS is confirmed ✅
+    </p>
+  </form>
+
+</div>
+</div>
+
+<!-- GPS JavaScript -->
+<script>
+  const statusBox = document.getElementById('gps-status');
+  const submitBtn = document.getElementById('submit-btn');
+  const latField  = document.getElementById('latitude');
+  const lngField  = document.getElementById('longitude');
+
+  if (!navigator.geolocation) {
+    statusBox.className   = 'alert alert-danger';
+    statusBox.textContent = '❌ GPS not supported on this device.';
+  } else {
+    navigator.geolocation.getCurrentPosition(
+
+      // SUCCESS — GPS fetched
+      function(position) {
+        latField.value = position.coords.latitude;
+        lngField.value = position.coords.longitude;
+
+        statusBox.className   = 'alert alert-success';
+        statusBox.textContent =
+          '✅ Location confirmed: '
+          + position.coords.latitude.toFixed(4)
+          + ', '
+          + position.coords.longitude.toFixed(4);
+
+        submitBtn.disabled = false;  // unlock the button
+      },
+
+      // ERROR — GPS denied
+      function(error) {
+        statusBox.className   = 'alert alert-danger';
+        statusBox.textContent =
+          '❌ Location access denied. Please enable GPS to submit.';
+        // submit stays disabled
+      },
+
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+</script>
+
+{% endblock %}

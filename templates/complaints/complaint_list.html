@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Complaints — NagarikSetu{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>All Complaints</h2>
+
+  <a href="{% url 'complaint-create' %}" class="btn btn-success">
+  + Raise Complaint
+</a>
+
+{% if complaints %}
+  {% for complaint in complaints %}
+  <div class="card mb-3">
+    <div class="card-body d-flex justify-content-between">
+      <div>
+        <h5>{{ complaint.get_issue_type_display }}</h5>
+        <p class="text-muted mb-1">{{ complaint.description|truncatechars:80 }}</p>
+        <small>{{ complaint.created_at|date:"d M Y, H:i" }}</small>
+      </div>
+      <div class="text-end">
+        <!-- status badge -->
+        {% if complaint.status == 'submitted' %}
+          <span class="badge bg-warning">Submitted</span>
+        {% elif complaint.status == 'seen' %}
+          <span class="badge bg-info">Seen</span>
+        {% else %}
+          <span class="badge bg-success">Resolved</span>
+        {% endif %}
+        <br><br>
+        <a href="{% url 'complaint-detail' complaint.pk %}"
+           class="btn btn-outline-secondary btn-sm">View</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="text-muted">No complaints yet.</p>
+{% endif %}
+
+{% endblock %}

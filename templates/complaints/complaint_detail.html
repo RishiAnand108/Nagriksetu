@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint #{{ complaint.id }}{% endblock %}
+
+{% block content %}
+
+<div class="row">
+  <div class="col-md-7">
+    <h3>{{ complaint.get_issue_type_display }}</h3>
+    <p class="text-muted">Filed by {{ complaint.user.username }}
+       on {{ complaint.created_at|date:"d M Y" }}</p>
+
+    <p>{{ complaint.description }}</p>
+
+    <!-- Status badge -->
+    <p>Status:
+      <strong>{{ complaint.get_status_display }}</strong>
+    </p>
+
+    <!-- GPS info -->
+    <p class="text-muted small">
+      📍 {{ complaint.latitude }}, {{ complaint.longitude }}
+    </p>
+
+    <a href="{% url 'complaint-list' %}"
+       class="btn btn-outline-secondary mt-3">← Back</a>
+  </div>
+
+  <!-- Photo -->
+  <div class="col-md-5">
+    {% if complaint.image %}
+      <img src="{{ complaint.image.url }}"
+           class="img-fluid rounded"
+           alt="Complaint photo">
+    {% else %}
+      <p class="text-muted">No photo uploaded.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
