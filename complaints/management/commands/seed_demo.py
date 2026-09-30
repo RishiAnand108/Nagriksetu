@@ -12,7 +12,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from complaints.models import Comment, Complaint, IssueType, Priority, Status, Upvote, Ward
+from complaints.models import Comment, Complaint, Priority, Status, Upvote, Ward
 from users.models import CustomUser, Role
 
 WARDS = [

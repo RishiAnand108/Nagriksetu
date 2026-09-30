@@ -403,7 +403,7 @@ class ComplaintAPITest(TestCase):
         self.assertEqual(data['count'], 2)
 
     def test_detail_is_not_readable_by_a_stranger(self):
-        """Regression: ComplaintDetailAPI used to fetch by pk with no scoping."""
+        """Regression: the API detail endpoint once fetched by pk with no scoping."""
         self.client.force_login(self.other)
         response = self.client.get(f'/api/complaints/{self.complaint.pk}/', headers={'accept': 'application/json'})
         self.assertEqual(response.status_code, 404)

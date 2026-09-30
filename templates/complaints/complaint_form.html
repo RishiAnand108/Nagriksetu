@@ -96,7 +96,7 @@
           <div class="gps" data-gps data-state="{% if mode == 'edit' %}idle{% else %}pending{% endif %}"
                {% if mode == 'edit' and complaint.has_location %}data-initial-lat="{{ complaint.latitude|stringformat:'f' }}" data-initial-lng="{{ complaint.longitude|stringformat:'f' }}"{% endif %}
                aria-live="polite">
-            <div class="gps-icon" data-gps-icon>{% icon 'crosshair' %}</div>
+            <div class="gps-icon">{% icon 'crosshair' %}</div>
             <div style="flex:1;min-width:0">
               <div class="gps-title" data-gps-title>
                 {% if mode == 'edit' %}{% if complaint.has_location %}Location on file{% else %}No location on file{% endif %}{% else %}Finding your location…{% endif %}
@@ -128,7 +128,7 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn lg" data-submit>
+      <button type="submit" class="btn lg">
         <span class="spinner" aria-hidden="true"></span><span class="btn-icon">{% icon 'send' %}</span>
         {% if mode == 'edit' %}Save changes{% else %}Submit complaint{% endif %}
       </button>

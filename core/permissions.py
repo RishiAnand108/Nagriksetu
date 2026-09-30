@@ -4,8 +4,6 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from complaints import policies
 
-is_corporator = policies.is_corporator
-
 
 class IsCorporator(BasePermission):
     """Only municipal corporators may pass."""
@@ -13,7 +11,7 @@ class IsCorporator(BasePermission):
     message = 'Only corporators can perform this action.'
 
     def has_permission(self, request, view):
-        return is_corporator(request.user)
+        return policies.is_corporator(request.user)
 
 
 class ComplaintAccess(BasePermission):

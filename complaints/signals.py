@@ -2,13 +2,10 @@
 """
 Signal handlers.
 
-Image processing is deliberately NOT wired to post_save any more. The old
-handler re-entered save() from inside a save(), which meant every complaint was
-written twice and the watermark ran synchronously inside the request. Creation
-now queues the job explicitly in complaints.services.create_complaint.
-
-What remains here is cleanup: files on disk have no owner once their row is
-gone, so deleting a complaint deletes its photos too.
+Only file cleanup lives here: photos on disk have no owner once their row is
+gone. Image processing is deliberately not a post_save hook — it is queued
+explicitly by the service layer after the transaction commits, so it never
+re-enters save() or runs before the row exists for a worker.
 """
 import logging
 

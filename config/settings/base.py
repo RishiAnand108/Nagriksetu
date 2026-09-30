@@ -292,11 +292,9 @@ SECURE_CSP = {
 # With no broker configured the image pipeline runs inline, so the project
 # stays a plain `runserver` app until someone actually wants a worker.
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='') or None
 CELERY_TASK_ALWAYS_EAGER = not bool(CELERY_BROKER_URL)
 CELERY_TASK_EAGER_PROPAGATES = False
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ACKS_LATE = True

@@ -139,7 +139,6 @@ ul, ol { padding-left: 1.2rem; }
 .icon { width: 1.1em; height: 1.1em; flex: none; vertical-align: -.18em; stroke: currentColor; fill: none;
         stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-lg { width: 1.5rem; height: 1.5rem; }
-.icon-xl { width: 2rem; height: 2rem; }
 
 /* ── Utilities ─────────────────────────────────────── */
 .muted { color: var(--ink-500); }
@@ -149,7 +148,7 @@ ul, ol { padding-left: 1.2rem; }
 .center { text-align: center; }
 .nowrap { white-space: nowrap; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.mb-0 { margin-bottom: 0 !important; } .mb-1 { margin-bottom: .5rem; } .mb-2 { margin-bottom: 1rem; } .mb-3 { margin-bottom: 1.5rem; } .mb-4 { margin-bottom: 2.5rem; }
+.mb-0 { margin-bottom: 0 !important; } .mb-1 { margin-bottom: .5rem; } .mb-2 { margin-bottom: 1rem; } .mb-3 { margin-bottom: 1.5rem; }
 .mt-1 { margin-top: .5rem; } .mt-2 { margin-top: 1rem; } .mt-3 { margin-top: 1.5rem; }
 .row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -177,7 +176,6 @@ ul, ol { padding-left: 1.2rem; }
 .split { display: grid; gap: 1.5rem; grid-template-columns: 1fr; align-items: start; }
 @media (min-width: 960px) {
   .split { grid-template-columns: minmax(0, 1fr) 360px; }
-  .split-wide { grid-template-columns: minmax(0, 1fr) 380px; }
 }
 
 /* ── Navigation ─────────────────────────────────────── */
@@ -254,8 +252,6 @@ ul, ol { padding-left: 1.2rem; }
 .btn.danger-outline:hover { background: var(--danger-bg); }
 .btn.accent { background: var(--accent-500); color: #1b1203; }
 .btn.accent:hover { background: #bf6a08; color: #1b1203; }
-.btn.light { background: #fff; color: var(--brand-700); }
-.btn.light:hover { background: var(--brand-50); color: var(--brand-900); }
 .btn.outline-light { background: transparent; color: #fff; border-color: rgba(255,255,255,.5); }
 .btn.outline-light:hover { background: rgba(255,255,255,.1); color: #fff; }
 .btn.sm { padding: .4rem .7rem; font-size: .84rem; }
@@ -264,8 +260,6 @@ ul, ol { padding-left: 1.2rem; }
 .btn .spinner { display: none; }
 .btn.is-loading .spinner { display: inline-block; }
 .btn.is-loading .btn-icon { display: none; }
-.btn-link { background: none; border: 0; padding: 0; font: inherit; color: var(--brand-600); cursor: pointer; }
-.btn-link:hover { text-decoration: underline; }
 
 .spinner {
   width: 1em; height: 1em; border-radius: 50%;
@@ -280,7 +274,6 @@ ul, ol { padding-left: 1.2rem; }
 .card-head h2, .card-head h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: .5rem; }
 .card-body { padding: 1.25rem; }
 .card-foot { padding: .85rem 1.25rem; border-top: 1px solid var(--ink-100); background: var(--ink-50); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
-.card.flush .card-body { padding: 0; }
 .card-accent { border-top: 3px solid var(--brand-500); }
 
 /* ── Forms ──────────────────────────────────────────── */
@@ -327,7 +320,6 @@ select.field-input {
 
 /* Issue-type picker (radio cards) */
 .choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .6rem; }
-.choice-grid > div { display: contents; }
 .choice { position: relative; }
 .choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .choice label {
@@ -451,7 +443,6 @@ a.stat:hover { border-color: var(--brand-200); text-decoration: none; box-shadow
 .tab:hover { color: var(--ink-900); text-decoration: none; }
 .tab[aria-current="page"] { color: var(--brand-700); border-bottom-color: var(--brand-600); }
 .tab.is-disabled { color: var(--ink-400); cursor: not-allowed; }
-.tab .count { background: var(--ink-100); color: var(--ink-600); border-radius: 999px; padding: 0 .45rem; font-size: .75rem; }
 
 /* ── Filter bar ─────────────────────────────────────── */
 .filter-bar { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); align-items: end; }
@@ -692,7 +683,6 @@ dialog.modal::backdrop { background: rgba(12, 35, 64, .55); }
 .auth-head .brand-mark .icon { width: 26px; height: 26px; }
 .auth-head p { color: var(--ink-500); margin: .25rem 0 0; }
 .auth-foot { text-align: center; margin-top: 1.25rem; font-size: .9rem; color: var(--ink-600); }
-.demo-hint { font-size: .82rem; }
 
 /* ── Footer ─────────────────────────────────────────── */
 .footer { background: var(--surface); border-top: 1px solid var(--ink-100); padding: 2rem 0; font-size: .86rem; color: var(--ink-500); }

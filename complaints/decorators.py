@@ -11,9 +11,8 @@ def corporator_required(view_func):
     """
     Restrict a view to corporators.
 
-    Anonymous users are sent to the login page with ?next= preserved (the old
-    version dropped it, so signing in dumped you back at the complaint list);
-    signed-in citizens get a 403.
+    Anonymous users are sent to the login page with ?next= preserved, so they
+    land back here after signing in; signed-in citizens get a 403.
     """
 
     @wraps(view_func)

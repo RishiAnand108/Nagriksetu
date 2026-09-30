@@ -32,8 +32,6 @@ class Status(models.TextChoices):
 
 # Statuses that count as "no longer active work".
 CLOSED_STATUSES = {Status.RESOLVED, Status.REJECTED}
-# Waiting on the municipality to start work.
-PENDING_STATUSES = {Status.SUBMITTED, Status.SEEN}
 
 # Which moves a corporator is allowed to make from a given status. Enforced in
 # complaints.services.change_status so the rule lives in exactly one place.
@@ -218,17 +216,6 @@ class Complaint(models.Model):
             return 0
         end = self.resolved_at or timezone.now()
         return (end - self.created_at).days
-
-    @property
-    def status_css(self) -> str:
-        """Maps a status onto the badge modifier used in static/css/app.css."""
-        return {
-            Status.SUBMITTED: 'warn',
-            Status.SEEN: 'info',
-            Status.IN_PROGRESS: 'progress',
-            Status.RESOLVED: 'ok',
-            Status.REJECTED: 'danger',
-        }.get(self.status, 'info')
 
     def allowed_next_statuses(self):
         """Status values a corporator may move this complaint to right now."""

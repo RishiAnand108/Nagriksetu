@@ -100,7 +100,6 @@ class StatusUpdateForm(forms.Form):
 
     def __init__(self, *args, complaint=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.complaint = complaint
         if complaint is not None:
             self.fields['status'].choices = complaint.allowed_next_choices()
 
@@ -141,7 +140,6 @@ class HandlingForm(forms.Form):
 class ComplaintFilterForm(forms.Form):
     """Search and filter controls shared by the lists, dashboard and map."""
 
-    SCOPE_CHOICES = [('mine', 'My reports'), ('ward', 'My ward')]
     ASSIGNED_CHOICES = [('', 'Anyone'), ('me', 'Assigned to me'), ('none', 'Unassigned')]
     ORDERING_CHOICES = [
         ('-created_at', 'Newest first'),
@@ -159,7 +157,6 @@ class ComplaintFilterForm(forms.Form):
             'type': 'search',
         }),
     )
-    scope = forms.ChoiceField(required=False, choices=SCOPE_CHOICES, widget=forms.HiddenInput)
     status = forms.ChoiceField(
         required=False,
         choices=[('', 'Any status'), ('open', 'All open')] + list(Status.choices),
