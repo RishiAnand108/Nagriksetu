@@ -380,11 +380,10 @@ def update_handling(request, pk):
         messages.error(request, 'Please check the triage fields and try again.')
     else:
         data = form.cleaned_data
+        # Only what the official actually touched — the form posts every field.
+        edits = {f: data[f] for f in ('priority', 'assigned_to', 'ward') if f in form.changed_data}
         try:
-            changed = services.update_handling(
-                complaint, actor=request.user, note=data.get('note', ''),
-                priority=data['priority'], assigned_to=data['assigned_to'], ward=data['ward'],
-            )
+            changed = services.update_handling(complaint, actor=request.user, note=data.get('note', ''), **edits)
             if changed:
                 messages.success(request, 'Saved: ' + '; '.join(changed) + '.')
             else:

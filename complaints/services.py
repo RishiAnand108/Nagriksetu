@@ -273,6 +273,7 @@ def update_handling(complaint: Complaint, *, actor, priority=_UNSET, assigned_to
         events.append((EventKind.WARD, f'Moved from {old} to {ward or "Unrouted"}'))
         # A transfer hands the complaint to the new ward's office.
         if complaint.assigned_to and complaint.assigned_to.ward_id not in (None, getattr(ward, 'pk', None)):
+            events.append((EventKind.ASSIGNMENT, f'Unassigned {complaint.assigned_to.display_name} (ward transfer)'))
             complaint.assigned_to = None
 
     if assigned_to is not _UNSET and assigned_to != complaint.assigned_to:
