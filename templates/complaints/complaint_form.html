@@ -1,96 +1,145 @@
-<!-- templates/complaints/complaint_form.html -->
 {% extends "base.html" %}
+{% load static complaint_extras %}
+{% block title %}{% if mode == 'edit' %}Edit complaint #{{ complaint.pk }}{% else %}Report an issue{% endif %} — {{ SITE_NAME }}{% endblock %}
 
-{% block title %}Raise Complaint — NagarikSetu{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-<div class="col-md-6">
+<div class="narrow">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    {% if mode == 'edit' %}
+      <a href="{{ complaint.get_absolute_url }}">{% icon 'arrow-left' %} Complaint #{{ complaint.pk }}</a>
+    {% else %}
+      <a href="{% url 'dashboard' %}">{% icon 'arrow-left' %} Dashboard</a>
+    {% endif %}
+  </nav>
 
-  <h3 class="mb-3">🏛 Raise a Complaint</h3>
-
-  <!-- GPS status banner -->
-  <div id="gps-status" class="alert alert-warning">
-    📍 Fetching your location...
+  <div class="page-head">
+    <div>
+      <h1>{% if mode == 'edit' %}Edit your complaint{% else %}Report a civic issue{% endif %}</h1>
+      <p>{% if mode == 'edit' %}You can make changes until the ward office acknowledges it.
+         {% else %}A clear photo and an accurate location get issues fixed fastest.{% endif %}</p>
+    </div>
   </div>
 
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" novalidate data-complaint-form data-busy-form
+        data-max-mb="{{ MAX_UPLOAD_SIZE_MB }}" data-mode="{{ mode }}">
     {% csrf_token %}
-
-    <!-- Hidden GPS fields — filled by JavaScript -->
-    <input type="hidden" name="latitude"  id="latitude">
+    <input type="hidden" name="latitude" id="latitude">
     <input type="hidden" name="longitude" id="longitude">
 
-    <!-- Issue type -->
-    <div class="mb-3">
-      <label class="form-label fw-bold">Issue Type</label>
-      {{ form.issue_type }}
+    {% if form.errors %}
+      <div class="alert error" role="alert">{% icon 'alert' %}<div>
+        {% if form.non_field_errors %}{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}
+        {% else %}<p>Please fix the highlighted fields below.</p>{% endif %}
+      </div></div>
+    {% endif %}
+
+    <div class="stack-lg">
+      {# ── 1. Issue type ─────────────────────────────── #}
+      <section class="card">
+        <div class="card-head"><h2>{% icon 'list' %} 1. What kind of issue is it?</h2></div>
+        <div class="card-body">
+          <fieldset style="border:0;padding:0;margin:0">
+            <legend class="visually-hidden">Issue type</legend>
+            <div class="choice-grid">
+              {% for radio in form.issue_type %}
+                <div class="choice">
+                  {{ radio.tag }}
+                  <label for="{{ radio.id_for_label }}">{% issue_icon radio.data.value %}{{ radio.choice_label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+            {% for error in form.issue_type.errors %}<div class="field-error" role="alert">{% icon 'alert' %}<span>Please choose the type of issue.</span></div>{% endfor %}
+          </fieldset>
+        </div>
+      </section>
+
+      {# ── 2. Photo ──────────────────────────────────── #}
+      <section class="card">
+        <div class="card-head"><h2>{% icon 'camera' %} 2. Add a photo</h2><span class="small muted">Recommended</span></div>
+        <div class="card-body">
+          <div class="field mb-0{% if form.image.errors %} has-error{% endif %}" data-uploader>
+            {{ form.image }}
+            <label class="dropzone" for="{{ form.image.id_for_label }}" data-dropzone {% if mode == 'edit' and complaint.image %}hidden{% endif %}>
+              {% icon 'upload' %}
+              <strong>Take a photo or choose one</strong>
+              <span class="small muted">JPEG, PNG or WebP · up to {{ MAX_UPLOAD_SIZE_MB }} MB</span>
+            </label>
+
+            <div class="upload-preview" data-preview {% if not mode == 'edit' or not complaint.image %}hidden{% endif %}>
+              <img src="{% if mode == 'edit' and complaint.thumbnail %}{{ complaint.thumbnail.url }}{% elif mode == 'edit' and complaint.image %}{{ complaint.image.url }}{% else %}data:,{% endif %}" alt="Selected photo preview" data-preview-img>
+              <div class="upload-meta">
+                <span class="truncate" data-preview-name>{% if mode == 'edit' and complaint.image %}Current photo{% endif %}</span>
+                <span class="small muted" data-preview-size>{% if mode == 'edit' and complaint.image %}Choose a new one to replace it{% endif %}</span>
+                <div class="row mt-1">
+                  <label class="btn secondary sm" for="{{ form.image.id_for_label }}">{% icon 'refresh' %}Change</label>
+                  <button type="button" class="btn ghost sm" data-preview-remove {% if mode == 'edit' %}hidden{% endif %}>{% icon 'trash' %}Remove</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-error" data-upload-error role="alert" hidden>{% icon 'alert' %}<span></span></div>
+            {% for error in form.image.errors %}<div class="field-error" role="alert">{% icon 'alert' %}<span>{{ error }}</span></div>{% endfor %}
+            <p class="field-help">The photo is stamped with the report number, location and time. Camera metadata (EXIF) is removed.</p>
+          </div>
+        </div>
+      </section>
+
+      {# ── 3. Location ───────────────────────────────── #}
+      <section class="card">
+        <div class="card-head"><h2>{% icon 'pin' %} 3. Where is it?</h2></div>
+        <div class="card-body">
+          <div class="gps" data-gps data-state="{% if mode == 'edit' %}idle{% else %}pending{% endif %}"
+               {% if mode == 'edit' and complaint.has_location %}data-initial-lat="{{ complaint.latitude|stringformat:'f' }}" data-initial-lng="{{ complaint.longitude|stringformat:'f' }}"{% endif %}
+               aria-live="polite">
+            <div class="gps-icon" data-gps-icon>{% icon 'crosshair' %}</div>
+            <div style="flex:1;min-width:0">
+              <div class="gps-title" data-gps-title>
+                {% if mode == 'edit' %}{% if complaint.has_location %}Location on file{% else %}No location on file{% endif %}{% else %}Finding your location…{% endif %}
+              </div>
+              <div class="gps-text" data-gps-text>
+                {% if mode == 'edit' %}{% if complaint.has_location %}{{ complaint.latitude|floatformat:5 }}, {{ complaint.longitude|floatformat:5 }}{% else %}You can capture your current position if you are at the spot.{% endif %}
+                {% else %}Your browser may ask for permission. Stand close to the issue for best accuracy.{% endif %}
+              </div>
+              <button type="button" class="btn secondary sm mt-1" data-gps-retry {% if mode != 'edit' %}hidden{% endif %}>
+                {% icon 'crosshair' %}{% if mode == 'edit' %}Use my current location{% else %}Try again{% endif %}
+              </button>
+            </div>
+          </div>
+          <div class="mini-map" data-gps-map hidden aria-label="Map preview of the captured location"></div>
+
+          <div class="mt-2">{% include "partials/field.html" with field=form.address %}</div>
+        </div>
+      </section>
+
+      {# ── 4. Details ────────────────────────────────── #}
+      <section class="card">
+        <div class="card-head"><h2>{% icon 'edit' %} 4. Describe the problem</h2></div>
+        <div class="card-body">
+          {% include "partials/field.html" with field=form.title %}
+          {% include "partials/field.html" with field=form.description %}
+          <p class="field-help mb-0">A description or a photo is required — ideally both.</p>
+        </div>
+      </section>
     </div>
 
-    <!-- Description -->
-    <div class="mb-3">
-      <label class="form-label fw-bold">Description</label>
-      {{ form.description }}
+    <div class="form-actions">
+      <button type="submit" class="btn lg" data-submit>
+        <span class="spinner" aria-hidden="true"></span><span class="btn-icon">{% icon 'send' %}</span>
+        {% if mode == 'edit' %}Save changes{% else %}Submit complaint{% endif %}
+      </button>
+      <a class="btn ghost" href="{% if mode == 'edit' %}{{ complaint.get_absolute_url }}{% else %}{% url 'dashboard' %}{% endif %}">Cancel</a>
     </div>
-
-    <!-- Photo -->
-    <div class="mb-3">
-      <label class="form-label fw-bold">📷 Photo</label>
-      {{ form.image }}
-    </div>
-
-    <!-- Submit — disabled until GPS confirmed -->
-    <button type="submit" id="submit-btn"
-            class="btn btn-success w-100" disabled>
-      Submit Complaint
-    </button>
-    <p class="text-muted small mt-2 text-center">
-      Button enables after GPS is confirmed ✅
-    </p>
   </form>
-
 </div>
-</div>
+{% endblock %}
 
-<!-- GPS JavaScript -->
-<script>
-  const statusBox = document.getElementById('gps-status');
-  const submitBtn = document.getElementById('submit-btn');
-  const latField  = document.getElementById('latitude');
-  const lngField  = document.getElementById('longitude');
-
-  if (!navigator.geolocation) {
-    statusBox.className   = 'alert alert-danger';
-    statusBox.textContent = '❌ GPS not supported on this device.';
-  } else {
-    navigator.geolocation.getCurrentPosition(
-
-      // SUCCESS — GPS fetched
-      function(position) {
-        latField.value = position.coords.latitude;
-        lngField.value = position.coords.longitude;
-
-        statusBox.className   = 'alert alert-success';
-        statusBox.textContent =
-          '✅ Location confirmed: '
-          + position.coords.latitude.toFixed(4)
-          + ', '
-          + position.coords.longitude.toFixed(4);
-
-        submitBtn.disabled = false;  // unlock the button
-      },
-
-      // ERROR — GPS denied
-      function(error) {
-        statusBox.className   = 'alert alert-danger';
-        statusBox.textContent =
-          '❌ Location access denied. Please enable GPS to submit.';
-        // submit stays disabled
-      },
-
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
-</script>
-
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+<script src="{% static 'js/complaint-form.js' %}" defer></script>
 {% endblock %}

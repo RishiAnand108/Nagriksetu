@@ -1,0 +1,12 @@
+{% autoescape off %}Hello {{ user.display_name }},
+
+Please confirm that {{ user.email }} is your email address, so we can send you
+updates on the complaints you report:
+
+{{ link }}
+
+This link expires in 3 days. If you did not create a {{ site_name }} account,
+you can ignore this message.
+
+— {{ site_name }}
+{% endautoescape %}

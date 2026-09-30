@@ -1,0 +1,53 @@
+{% load complaint_extras %}{# Expects `complaint` from annotated_for(): upvote_count / comment_count / has_upvoted. #}
+<article class="card complaint-card">
+  <a class="complaint-thumb" href="{{ complaint.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+    {% if complaint.thumbnail %}
+      <img src="{{ complaint.thumbnail.url }}" alt="" loading="lazy">
+    {% elif complaint.image %}
+      <img src="{{ complaint.image.url }}" alt="" loading="lazy">
+    {% else %}
+      {% issue_icon complaint.issue_type %}
+    {% endif %}
+    {% status_badge complaint.status %}
+  </a>
+
+  <div class="card-body">
+    <div class="row tiny muted">
+      <span class="row" style="gap:.3rem">{% issue_icon complaint.issue_type %}{{ complaint.get_issue_type_display }}</span>
+      <span aria-hidden="true">·</span>
+      <span class="mono">#{{ complaint.pk }}</span>
+      {% if complaint.is_high_priority %}<span class="push">{% priority_indicator complaint.priority %}</span>{% endif %}
+    </div>
+
+    <h3 class="complaint-title mb-0"><a href="{{ complaint.get_absolute_url }}">{{ complaint.headline }}</a></h3>
+
+    <div class="complaint-meta">
+      {% if complaint.address %}
+        <span class="truncate" title="{{ complaint.address }}">{% icon 'pin' %}{{ complaint.address|truncatechars:48 }}</span>
+      {% elif complaint.ward %}
+        <span>{% icon 'pin' %}{{ complaint.ward.name }}</span>
+      {% elif complaint.has_location %}
+        <span>{% icon 'pin' %}GPS location</span>
+      {% endif %}
+      <span>{% icon 'calendar' %}<time datetime="{{ complaint.created_at|date:'c' }}">{{ complaint.created_at|date:"d M Y" }}</time></span>
+    </div>
+  </div>
+
+  <div class="card-foot">
+    <span class="row small muted" style="gap:.9rem">
+      <span class="row" style="gap:.3rem" title="Comments">{% icon 'message' %}{{ complaint.comment_count }}<span class="visually-hidden"> comments</span></span>
+      {% if complaint.user_id == user.pk %}<span class="badge brand">Your report</span>{% endif %}
+    </span>
+    {% if complaint.user_id != user.pk %}
+      <form method="post" action="{% url 'complaint-upvote' complaint.pk %}" data-upvote>
+        {% csrf_token %}
+        <button type="submit" class="upvote {% if complaint.has_upvoted %}is-on{% endif %}"
+                aria-pressed="{{ complaint.has_upvoted|yesno:'true,false' }}" title="This affects me too">
+          {% icon 'arrow-up' %}<span data-upvote-count>{{ complaint.upvote_count }}</span><span class="visually-hidden"> residents affected</span>
+        </button>
+      </form>
+    {% else %}
+      <span class="upvote-static" title="Residents who said this affects them too">{% icon 'users' %}{{ complaint.upvote_count }}</span>
+    {% endif %}
+  </div>
+</article>

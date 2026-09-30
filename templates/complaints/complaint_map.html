@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static complaint_extras %}
+{% block title %}Complaint map — {{ SITE_NAME }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Complaint map</h1>
+    <p>{% if is_corporator %}Every report with a location in your jurisdiction.{% else %}Your reports{% if user.ward %} and your ward's{% endif %}, wherever a location was captured.{% endif %}</p>
+  </div>
+  <a class="btn secondary" href="{% if is_corporator %}{% url 'corporator-dashboard' %}{% else %}{% url 'complaint-list' %}{% endif %}">{% icon 'list' %}List view</a>
+</div>
+
+{% include "complaints/_filter_bar.html" with show_ward=is_corporator show_priority=is_corporator %}
+
+<div class="card mb-2"><div class="card-body" style="padding:.75rem 1rem">
+  <div class="map-legend">
+    <span class="legend-item"><i class="legend-dot submitted"></i>Submitted</span>
+    <span class="legend-item"><i class="legend-dot seen"></i>Acknowledged</span>
+    <span class="legend-item"><i class="legend-dot in_progress"></i>In progress</span>
+    <span class="legend-item"><i class="legend-dot resolved"></i>Resolved</span>
+    <span class="legend-item"><i class="legend-dot rejected"></i>Rejected</span>
+    <span class="legend-item">Larger ring = high priority</span>
+    <span class="push strong" data-map-count aria-live="polite"></span>
+  </div>
+</div></div>
+
+<div class="map-frame">
+  <div id="map" data-map data-feed="{% url 'complaint-map-data' %}" role="region" aria-label="Map of reported complaints"></div>
+
+  <div class="map-overlay" data-map-state="loading">
+    <div class="panel"><span class="spinner" aria-hidden="true"></span> Loading complaints…</div>
+  </div>
+  <div class="map-overlay" data-map-state="empty" hidden>
+    <div class="panel">
+      <div class="empty-icon">{% icon 'map' %}</div>
+      <h3>Nothing to plot</h3>
+      <p class="small muted mb-2">No complaint matching these filters has a captured location.</p>
+      {% if has_filters %}<a class="btn secondary sm" href="{{ request.path }}">Clear filters</a>{% endif %}
+    </div>
+  </div>
+  <div class="map-overlay" data-map-state="error" hidden>
+    <div class="panel" role="alert">
+      <div class="empty-icon">{% icon 'alert' %}</div>
+      <h3 data-map-error-title>Couldn't load the map data</h3>
+      <p class="small muted mb-2" data-map-error-text>Something went wrong on our side. Please try again.</p>
+      <button type="button" class="btn sm" data-map-retry>{% icon 'refresh' %}Try again</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+<script src="{% static 'js/map.js' %}" defer></script>
+{% endblock %}

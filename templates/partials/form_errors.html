@@ -1,0 +1,3 @@
+{% load complaint_extras %}{% if form.non_field_errors %}
+  <div class="alert error" role="alert">{% icon 'alert' %}<div>{% for e in form.non_field_errors %}<p>{{ e }}</p>{% endfor %}</div></div>
+{% endif %}

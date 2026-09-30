@@ -1,0 +1,19 @@
+{% autoescape off %}Hello {{ complaint.user.display_name }},
+
+Your complaint #{{ complaint.pk }} ({{ complaint.get_issue_type_display }}) has moved
+from "{{ old_status }}" to "{{ complaint.get_status_display }}".
+{% if note %}
+Note from the ward office:
+  {{ note }}
+{% endif %}
+  What you reported : {{ complaint.headline }}
+  Filed on          : {{ complaint.created_at|date:"d M Y" }}{% if complaint.ward %}
+  Ward              : {{ complaint.ward }}{% endif %}
+
+See the full timeline and reply here:
+{{ site_url }}{{ complaint.get_absolute_url }}
+
+— {{ site_name }}
+
+You are receiving this because complaint updates are enabled on your profile.
+{% endautoescape %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load complaint_extras humanize %}
+
+{% block title %}{{ SITE_NAME }} — Report civic issues. Track progress.{% endblock %}
+
+{% block fullwidth %}
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="eyebrow">Civic grievance platform for city wards</div>
+      <h1>Report civic issues.<br>Track progress.<br>Build accountable communities.</h1>
+      <p class="lead">
+        Photograph a pothole, an overflowing bin or a dark streetlight. NagrikSetu files it with the
+        responsible ward office, and every step they take is recorded where you can see it.
+      </p>
+      <div class="hero-actions">
+        <a class="btn accent lg" href="{% url 'complaint-create' %}">{% icon 'camera' %}Report an issue</a>
+        <a class="btn outline-light lg" href="{% url 'complaint-list' %}">{% icon 'search' %}Track a complaint</a>
+      </div>
+    </div>
+
+    <div class="hero-card" aria-label="Example of a complaint moving through the workflow">
+      <div class="row-between">
+        <div>
+          <div class="tiny muted">Example complaint</div>
+          <div class="strong">{% issue_icon 'road' %} Deep pothole at the junction</div>
+        </div>
+        {% status_badge 'in_progress' %}
+      </div>
+      <ol class="hero-steps">
+        <li>{% icon 'camera' %} Photo stamped with report ID, location &amp; time {% status_badge 'submitted' %}</li>
+        <li>{% icon 'eye' %} Ward office acknowledges the report {% status_badge 'seen' %}</li>
+        <li>{% icon 'wrench' %} Work order raised, crew assigned {% status_badge 'in_progress' %}</li>
+        <li>{% icon 'check-circle' %} Fixed — you are notified {% status_badge 'resolved' %}</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how-it-works">
+  <div class="container">
+    <div class="section-head center">
+      <div class="eyebrow">How it works</div>
+      <h2>From a photo on the street to a closed complaint</h2>
+      <p>Three steps for citizens, one accountable workflow for the ward office.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Report it</h3>
+        <p>Choose the issue type, add a photo and let your phone share its location. A landmark helps when GPS is unavailable.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>It reaches the right office</h3>
+        <p>The complaint is routed to your ward. Corporators triage it by priority and assign it to someone responsible.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Track every step</h3>
+        <p>Each status change is written to a timeline with who made it and why. You get an email and can reply on the complaint.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section alt">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">What you can report</div>
+      <h2>Everyday problems, filed properly</h2>
+      <p>Pick the closest category — the ward office can re-route anything that is filed under the wrong one.</p>
+    </div>
+    <div class="category-grid">
+      {% for value, label in issue_types %}
+        <div class="category">{% issue_icon value %}{{ label }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container grid grid-3">
+    <div>
+      <div class="feature-icon">{% icon 'shield' %}</div>
+      <h3>Accountability built in</h3>
+      <p class="muted">Complaints can only move along an approved workflow. Every change — status, priority, assignment,
+        ward transfer — is kept in an audit trail that cannot be edited.</p>
+      <div class="workflow" aria-label="Complaint workflow">
+        {% status_badge 'submitted' %}<span class="arrow">{% icon 'chevron-right' %}</span>
+        {% status_badge 'seen' %}<span class="arrow">{% icon 'chevron-right' %}</span>
+        {% status_badge 'in_progress' %}<span class="arrow">{% icon 'chevron-right' %}</span>
+        {% status_badge 'resolved' %}
+      </div>
+    </div>
+    <div>
+      <div class="feature-icon">{% icon 'map' %}</div>
+      <h3>Location on every report</h3>
+      <p class="muted">Your browser's location is attached when you file, and the photo is stamped with the report ID,
+        coordinates and time. Officials see every open report on a ward map, colour-coded and labelled by status.</p>
+    </div>
+    <div>
+      <div class="feature-icon">{% icon 'users' %}</div>
+      <h3>Your ward, together</h3>
+      <p class="muted">See what neighbours in your ward have reported and mark "this affects me too", so widespread
+        problems rise to the top. Reporters' names are never shown to other residents.</p>
+    </div>
+  </div>
+</section>
+
+{% if totals.total %}
+<section class="section alt" aria-label="Platform statistics">
+  <div class="container">
+    <div class="public-stats">
+      <div class="public-stat"><div class="num">{{ totals.total|intcomma }}</div><div class="lbl">complaints reported</div></div>
+      <div class="public-stat"><div class="num">{{ totals.resolved|intcomma }}</div><div class="lbl">resolved so far</div></div>
+      <div class="public-stat"><div class="num">{{ totals.wards }}</div><div class="lbl">wards with reports</div></div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="container">
+    <div class="cta-band">
+      <div>
+        <h2>Seen something that needs fixing?</h2>
+        <p>Create a free account in under a minute and file your first report.</p>
+      </div>
+      <div class="row">
+        <a class="btn lg" href="{% url 'signup' %}">Create an account</a>
+        <a class="btn secondary lg" href="{% url 'login' %}">Sign in</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

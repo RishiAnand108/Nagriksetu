@@ -1,41 +1,261 @@
 {% extends "base.html" %}
+{% load static complaint_extras %}
+{% block title %}Complaint #{{ complaint.pk }}: {{ complaint.headline|truncatechars:50 }} — {{ SITE_NAME }}{% endblock %}
 
-{% block title %}Complaint #{{ complaint.id }}{% endblock %}
+{% block head %}
+{% if complaint.has_location %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endif %}
+{% endblock %}
 
 {% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% if is_corporator %}{% url 'corporator-dashboard' %}{% else %}{% url 'complaint-list' %}{% endif %}">{% icon 'arrow-left' %}
+    {% if is_corporator %}Dashboard{% else %}Complaints{% endif %}</a>
+  <span aria-hidden="true">/</span><span class="mono">#{{ complaint.pk }}</span>
+</nav>
 
-<div class="row">
-  <div class="col-md-7">
-    <h3>{{ complaint.get_issue_type_display }}</h3>
-    <p class="text-muted">Filed by {{ complaint.user.username }}
-       on {{ complaint.created_at|date:"d M Y" }}</p>
+{# ── Header ──────────────────────────────────────────── #}
+<header class="card mb-3">
+  <div class="card-body detail-head">
+    <div class="row">
+      {% status_badge complaint.status 'lg' %}
+      <span class="badge plain lg">{% issue_icon complaint.issue_type %}{{ complaint.get_issue_type_display }}</span>
+      {% priority_indicator complaint.priority %}
+      <span class="push mono muted">#{{ complaint.pk }}</span>
+    </div>
+    <h1>{{ complaint.headline }}</h1>
+    <div class="complaint-meta small">
+      <span>{% icon 'calendar' %}Reported <time datetime="{{ complaint.created_at|date:'c' }}">{{ complaint.created_at|date:"d M Y, H:i" }}</time></span>
+      {% if can_see_reporter %}<span>{% icon 'user' %}{% if is_owner %}by you{% else %}by {{ complaint.user.display_name }}{% endif %}</span>
+      {% else %}<span>{% icon 'user' %}by a resident of this ward</span>{% endif %}
+      <span>{% icon 'clock' %}{% if complaint.is_closed %}Closed after {{ complaint.age_days }} day{{ complaint.age_days|pluralize }}{% else %}Open for {{ complaint.age_days }} day{{ complaint.age_days|pluralize }}{% endif %}</span>
+      {% if complaint.ward %}<span>{% icon 'landmark' %}{{ complaint.ward }}</span>{% endif %}
+    </div>
 
-    <p>{{ complaint.description }}</p>
+    <div class="row mt-1">
+      {% if can_upvote %}
+        <form method="post" action="{% url 'complaint-upvote' complaint.pk %}" data-upvote>
+          {% csrf_token %}
+          <button type="submit" class="upvote {% if complaint.has_upvoted %}is-on{% endif %}" aria-pressed="{{ complaint.has_upvoted|yesno:'true,false' }}">
+            {% icon 'arrow-up' %}This affects me too · <span data-upvote-count>{{ complaint.upvote_count }}</span>
+          </button>
+        </form>
+      {% else %}
+        <span class="upvote-static">{% icon 'users' %}{{ complaint.upvote_count }} resident{{ complaint.upvote_count|pluralize }} affected</span>
+      {% endif %}
+      {% if can_edit %}
+        <a class="btn secondary sm push" href="{% url 'complaint-edit' complaint.pk %}">{% icon 'edit' %}Edit</a>
+        <form method="post" action="{% url 'complaint-delete' complaint.pk %}"
+              data-confirm="Withdraw complaint #{{ complaint.pk }}?"
+              data-confirm-text="The report, its photo and its history will be permanently removed. This cannot be undone."
+              data-confirm-label="Withdraw complaint">
+          {% csrf_token %}
+          <button class="btn danger-outline sm" type="submit">{% icon 'trash' %}Withdraw</button>
+        </form>
+      {% elif is_owner and not complaint.is_closed %}
+        <span class="small muted push">{% icon 'lock' %} Locked for editing — the ward office is handling it.</span>
+      {% endif %}
+    </div>
+  </div>
+</header>
 
-    <!-- Status badge -->
-    <p>Status:
-      <strong>{{ complaint.get_status_display }}</strong>
-    </p>
+<div class="split">
+  {# ── Main column ─────────────────────────────────────── #}
+  <div class="stack-lg">
 
-    <!-- GPS info -->
-    <p class="text-muted small">
-      📍 {{ complaint.latitude }}, {{ complaint.longitude }}
-    </p>
+    <section class="card" aria-labelledby="progress-heading">
+      <div class="card-head"><h2 id="progress-heading">{% icon 'activity' %} Progress</h2></div>
+      <div class="card-body">
+        <ol class="lifecycle">
+          {% for step in lifecycle %}
+            <li class="{% if step.done %}done{% elif step.current %}current{% elif step.skipped %}skipped{% endif %} is-{{ step.key }}"
+                {% if step.current %}aria-current="step"{% endif %}>
+              <span class="dot">{% if step.done %}{% icon 'check' %}{% elif step.skipped %}{% icon 'chevron-right' %}{% else %}{% icon step.key|status_icon_name %}{% endif %}</span>
+              <span class="step-label">{{ step.label }}</span>
+              <span class="step-time">{% if step.at %}{{ step.at|date:"d M" }}{% elif step.skipped %}Skipped{% else %}&nbsp;{% endif %}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </section>
 
-    <a href="{% url 'complaint-list' %}"
-       class="btn btn-outline-secondary mt-3">← Back</a>
+    <section class="card" aria-labelledby="evidence-heading">
+      {% if complaint.image %}
+        <div class="evidence-photo">
+          <img class="zoomable" src="{{ complaint.image.url }}" data-full="{{ complaint.image.url }}"
+               alt="Photo of the reported {{ complaint.get_issue_type_display|lower }} issue">
+          {% if not complaint.image_processed %}
+            <div class="processing"><span class="spinner" aria-hidden="true"></span> The photo is still being processed.</div>
+          {% endif %}
+        </div>
+      {% endif %}
+      <div class="card-head"><h2 id="evidence-heading">{% icon 'image' %} Report</h2></div>
+      <div class="card-body">
+        {% if complaint.description %}
+          <p class="description">{{ complaint.description }}</p>
+        {% else %}
+          <p class="muted">No description was given.</p>
+        {% endif %}
+        {% if not complaint.image %}<p class="small muted mb-0">{% icon 'camera' %} No photo was attached.</p>{% endif %}
+      </div>
+    </section>
+
+    <section class="card" id="discussion" aria-labelledby="discussion-heading">
+      <div class="card-head"><h2 id="discussion-heading">{% icon 'message' %} Discussion</h2><span class="small muted">{{ comments|length }} message{{ comments|length|pluralize }}</span></div>
+      <div class="card-body">
+        <div class="thread">
+          {% for comment in comments %}
+            <article class="message {% if comment.is_official %}is-official{% endif %} {% if comment.author_id == user.pk %}is-mine{% endif %}">
+              <span class="avatar {% if comment.is_official %}official{% endif %}" aria-hidden="true">{{ comment.author|initials }}</span>
+              <div class="message-body">
+                <div class="message-head">
+                  <span class="message-author">
+                    {% if comment.author_id == user.pk %}You{% elif comment.is_official or can_see_reporter %}{{ comment.author.display_name }}{% else %}Reporter{% endif %}
+                  </span>
+                  {% if comment.is_official %}<span class="badge brand">{% icon 'shield' %}Ward office</span>{% endif %}
+                  <time class="tiny muted" datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:"d M Y, H:i" }}</time>
+                </div>
+                <div class="message-text">{{ comment.body }}</div>
+              </div>
+            </article>
+          {% empty %}
+            <p class="muted small mb-0">No messages yet.{% if can_comment %} Ask a question or add an update below.{% endif %}</p>
+          {% endfor %}
+        </div>
+
+        {% if can_comment %}
+          <form method="post" action="{% url 'complaint-comment' complaint.pk %}" class="mt-3" data-busy-form>
+            {% csrf_token %}
+            <div class="field">
+              <label class="field-label" for="{{ comment_form.body.id_for_label }}">
+                {% if can_manage %}Reply as the ward office{% else %}Add a message{% endif %}
+              </label>
+              {{ comment_form.body }}
+              {% if can_manage %}<div class="field-help">Official replies are marked and emailed to the reporter.</div>{% endif %}
+            </div>
+            <button type="submit" class="btn"><span class="spinner" aria-hidden="true"></span><span class="btn-icon">{% icon 'send' %}</span>Post message</button>
+          </form>
+        {% else %}
+          <p class="small muted mt-2 mb-0">{% icon 'lock' %} Only the reporter and the ward office can post in this discussion.</p>
+        {% endif %}
+      </div>
+    </section>
   </div>
 
-  <!-- Photo -->
-  <div class="col-md-5">
-    {% if complaint.image %}
-      <img src="{{ complaint.image.url }}"
-           class="img-fluid rounded"
-           alt="Complaint photo">
-    {% else %}
-      <p class="text-muted">No photo uploaded.</p>
+  {# ── Side column ─────────────────────────────────────── #}
+  <aside class="stack-lg">
+    {% if can_manage %}
+      <section class="card card-accent" aria-labelledby="manage-heading">
+        <div class="card-head"><h2 id="manage-heading">{% icon 'shield' %} Manage complaint</h2></div>
+        <div class="card-body">
+          <h3 class="small strong">Update status</h3>
+          {% if status_form.fields.status.choices %}
+            <form method="post" action="{% url 'update-status' complaint.pk %}" data-busy-form>
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <div class="field">
+                <label class="field-label" for="{{ status_form.status.id_for_label }}">Move to</label>
+                {{ status_form.status }}
+              </div>
+              <div class="field">
+                <label class="field-label" for="{{ status_form.note.id_for_label }}">Note <span class="opt">(shown to the citizen)</span></label>
+                {{ status_form.note }}
+              </div>
+              <button type="submit" class="btn block"><span class="spinner" aria-hidden="true"></span>Update status</button>
+            </form>
+          {% else %}
+            <p class="small muted">No further transitions are available from this status.</p>
+          {% endif %}
+
+          <hr>
+          <h3 class="small strong">Triage</h3>
+          <form method="post" action="{% url 'update-handling' complaint.pk %}" data-busy-form>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div class="field">
+              <label class="field-label" for="{{ handling_form.priority.id_for_label }}">Priority</label>
+              {{ handling_form.priority }}
+            </div>
+            <div class="field">
+              <label class="field-label" for="{{ handling_form.assigned_to.id_for_label }}">Assigned to</label>
+              {{ handling_form.assigned_to }}
+            </div>
+            <div class="field">
+              <label class="field-label" for="{{ handling_form.ward.id_for_label }}">Ward</label>
+              {{ handling_form.ward }}
+              <div class="field-help">Transferring to another ward hands the complaint to that ward's office.</div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="{{ handling_form.note.id_for_label }}">Reason <span class="opt">(optional)</span></label>
+              {{ handling_form.note }}
+            </div>
+            <button type="submit" class="btn secondary block"><span class="spinner" aria-hidden="true"></span>Save triage</button>
+          </form>
+        </div>
+      </section>
     {% endif %}
-  </div>
-</div>
 
+    <section class="card" aria-labelledby="details-heading">
+      <div class="card-head"><h2 id="details-heading">{% icon 'pin' %} Location &amp; details</h2></div>
+      <div class="card-body">
+        {% if complaint.has_location %}
+          <div class="detail-map mb-2" data-detail-map
+               data-lat="{{ complaint.latitude|stringformat:'f' }}" data-lng="{{ complaint.longitude|stringformat:'f' }}"
+               data-status="{{ complaint.status }}" role="img" aria-label="Map showing where the issue was reported"></div>
+        {% endif %}
+        <dl class="meta-list">
+          <dt>{% icon 'landmark' %}Ward</dt><dd>{{ complaint.ward|default:"Not routed yet" }}</dd>
+          {% if complaint.address %}<dt>{% icon 'flag' %}Landmark</dt><dd>{{ complaint.address }}</dd>{% endif %}
+          <dt>{% icon 'crosshair' %}Coordinates</dt>
+          <dd class="mono">{% if complaint.has_location %}{{ complaint.latitude|floatformat:5 }}, {{ complaint.longitude|floatformat:5 }}{% else %}Not captured{% endif %}</dd>
+          <dt>{% icon 'user' %}Assigned to</dt><dd>{% if complaint.assigned_to %}{{ complaint.assigned_to.display_name }}{% else %}Not assigned{% endif %}</dd>
+          <dt>{% icon 'clock' %}Last update</dt><dd>{{ complaint.updated_at|date:"d M Y, H:i" }}</dd>
+        </dl>
+        {% if complaint.has_location %}
+          <a class="btn ghost block mt-2" target="_blank" rel="noopener noreferrer"
+             href="https://www.openstreetmap.org/?mlat={{ complaint.latitude|stringformat:'f' }}&amp;mlon={{ complaint.longitude|stringformat:'f' }}#map=18/{{ complaint.latitude|stringformat:'f' }}/{{ complaint.longitude|stringformat:'f' }}">
+            {% icon 'map' %}Open in OpenStreetMap<span class="visually-hidden"> (opens in a new tab)</span></a>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="history-heading">
+      <div class="card-head"><h2 id="history-heading">{% icon 'clock' %} Activity log</h2></div>
+      <div class="card-body">
+        <ol class="timeline">
+          {% for entry in history %}
+            <li>
+              {% if entry.is_status_change %}
+                <span class="t-dot {{ entry.new_status|status_tone }}">{% icon entry.new_status|status_icon_name %}</span>
+                <div class="t-title">
+                  {% if entry.old_status %}{{ entry.get_old_status_display }} → {{ entry.get_new_status_display }}{% else %}Complaint filed{% endif %}
+                </div>
+              {% else %}
+                <span class="t-dot">{% icon entry.kind|event_icon_name %}</span>
+                <div class="t-title">{{ entry.get_kind_display }}</div>
+              {% endif %}
+              <div class="t-meta">
+                <time datetime="{{ entry.created_at|date:'c' }}">{{ entry.created_at|date:"d M Y, H:i" }}</time>
+                {% if entry.changed_by %} · {% if entry.changed_by.is_corporator %}{{ entry.changed_by.display_name }} (ward office){% elif entry.changed_by_id == user.pk %}you{% elif can_see_reporter %}{{ entry.changed_by.display_name }}{% else %}reporter{% endif %}{% endif %}
+              </div>
+              {% if entry.note and entry.note != 'Complaint filed.' %}<div class="t-note">{{ entry.note }}</div>{% endif %}
+            </li>
+          {% empty %}
+            <li><div class="t-meta">No activity recorded.</div></li>
+          {% endfor %}
+        </ol>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if complaint.has_location %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+<script src="{% static 'js/detail-map.js' %}" defer></script>
+{% endif %}
 {% endblock %}

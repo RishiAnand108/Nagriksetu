@@ -1,0 +1,46 @@
+{% load complaint_extras %}{# Search + filter controls. Expects `filter_form`; optional: show_ward, show_priority, show_assigned, scope. #}
+<form method="get" class="card mb-3" data-autofilter role="search" aria-label="Filter complaints">
+  <div class="card-body">
+    {% if scope %}<input type="hidden" name="scope" value="{{ scope }}">{% endif %}
+    <div class="filter-bar">
+      <div class="field field-search">
+        <label class="field-label" for="{{ filter_form.q.id_for_label }}">Search</label>
+        <div class="search-input">{% icon 'search' %}{{ filter_form.q }}</div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="{{ filter_form.status.id_for_label }}">Status</label>
+        {{ filter_form.status }}
+      </div>
+      <div class="field">
+        <label class="field-label" for="{{ filter_form.issue_type.id_for_label }}">Issue type</label>
+        {{ filter_form.issue_type }}
+      </div>
+      {% if show_priority %}
+      <div class="field">
+        <label class="field-label" for="{{ filter_form.priority.id_for_label }}">Priority</label>
+        {{ filter_form.priority }}
+      </div>
+      {% endif %}
+      {% if show_ward %}
+      <div class="field">
+        <label class="field-label" for="{{ filter_form.ward.id_for_label }}">Ward</label>
+        {{ filter_form.ward }}
+      </div>
+      {% endif %}
+      {% if show_assigned %}
+      <div class="field">
+        <label class="field-label" for="{{ filter_form.assigned.id_for_label }}">Assignee</label>
+        {{ filter_form.assigned }}
+      </div>
+      {% endif %}
+      <div class="field">
+        <label class="field-label" for="{{ filter_form.ordering.id_for_label }}">Sort by</label>
+        {{ filter_form.ordering }}
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn">{% icon 'filter' %}Apply</button>
+        {% if has_filters %}<a class="btn ghost" href="{{ request.path }}{% if scope %}?scope={{ scope }}{% endif %}">Clear</a>{% endif %}
+      </div>
+    </div>
+  </div>
+</form>

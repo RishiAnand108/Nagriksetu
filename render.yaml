@@ -2,12 +2,28 @@ services:
   - type: web
     name: nagriksetu
     runtime: python
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-    startCommand: gunicorn config.wsgi --log-file -
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi --log-file - --workers 3 --timeout 60
+    healthCheckPath: /healthz/
     envVars:
+      - key: DJANGO_ENV
+        value: prod
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
-        value: False
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: nagriksetu.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://nagriksetu.onrender.com
       - key: PYTHON_VERSION
         value: 3.13.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nagriksetu-db
+          property: connectionString
+
+databases:
+  - name: nagriksetu-db
+    plan: free

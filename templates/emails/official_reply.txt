@@ -1,0 +1,13 @@
+{% autoescape off %}Hello {{ complaint.user.display_name }},
+
+{{ comment.author.display_name }} from the ward office replied on your complaint #{{ complaint.pk }}:
+
+  "{{ comment.body }}"
+
+Read the conversation and respond here:
+{{ site_url }}{{ complaint.get_absolute_url }}#discussion
+
+— {{ site_name }}
+
+You are receiving this because complaint updates are enabled on your profile.
+{% endautoescape %}

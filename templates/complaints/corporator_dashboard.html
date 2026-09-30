@@ -1,177 +1,154 @@
-<!-- templates/complaints/corporator_dashboard.html -->
 {% extends "base.html" %}
-{% block title %}Corporator Dashboard — NagarikSetu{% endblock %}
+{% load complaint_extras %}
+{% block title %}Operations dashboard — {{ SITE_NAME }}{% endblock %}
 
 {% block content %}
-
-<h3 class="mb-4">🏛 Corporator Dashboard</h3>
-
-<!-- Stats row -->
-<div class="row mb-4">
-  <div class="col-md-3">
-    <div class="card text-center border-0 bg-light">
-      <div class="card-body">
-        <h2 class="fw-bold">{{ total }}</h2>
-        <p class="text-muted mb-0">Total</p>
-      </div>
-    </div>
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Ward operations</div>
+    <h1>{% if ward_scope %}{{ ward_scope }}{% else %}City-wide dashboard{% endif %}</h1>
+    <p>{% if ward_scope %}Complaints in your ward, plus any not yet routed to a ward.{% else %}Every complaint across all wards.{% endif %}</p>
   </div>
-  <div class="col-md-3">
-    <div class="card text-center border-0" style="background:#FFF8E1">
-      <div class="card-body">
-        <h2 class="fw-bold text-warning">{{ submitted }}</h2>
-        <p class="text-muted mb-0">Submitted</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center border-0" style="background:#E3F2FD">
-      <div class="card-body">
-        <h2 class="fw-bold text-info">{{ seen }}</h2>
-        <p class="text-muted mb-0">Seen</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center border-0" style="background:#E8F5E9">
-      <div class="card-body">
-        <h2 class="fw-bold text-success">{{ resolved }}</h2>
-        <p class="text-muted mb-0">Resolved</p>
-      </div>
-    </div>
+  <div class="row">
+    <a class="btn secondary" href="{% url 'complaint-map' %}">{% icon 'map' %}Map view</a>
+    <a class="btn" href="?assigned=me&amp;status=open">{% icon 'user' %}My queue <span class="badge plain">{{ my_queue }}</span></a>
   </div>
 </div>
 
-<!-- Filter buttons -->
-<div class="mb-3 d-flex gap-2">
-  <a href="{% url 'corporator-dashboard' %}"
-     class="btn btn-sm {% if not status_filter %}btn-dark{% else %}btn-outline-dark{% endif %}">
-    All
+<section class="stats mb-3" aria-label="Complaint statistics">
+  <a class="stat {% if not request.GET.status %}is-active{% endif %}" href="{% url 'corporator-dashboard' %}">
+    <span class="stat-label">{% icon 'list' %}Total</span><span class="stat-value">{{ stats.total }}</span>
+    <span class="stat-note">{{ stats.resolution_rate }}% resolved</span>
   </a>
-  <a href="?status=submitted"
-     class="btn btn-sm {% if status_filter == 'submitted' %}btn-warning{% else %}btn-outline-warning{% endif %}">
-    Submitted
+  <a class="stat is-warn {% if request.GET.status == 'submitted' %}is-active{% endif %}" href="?status=submitted">
+    <span class="stat-label">{% icon 'inbox' %}Awaiting review</span><span class="stat-value">{{ stats.submitted }}</span>
+    {% if stats.seen %}<span class="stat-note">+{{ stats.seen }} acknowledged, not started</span>{% endif %}
   </a>
-  <a href="?status=seen"
-     class="btn btn-sm {% if status_filter == 'seen' %}btn-info{% else %}btn-outline-info{% endif %}">
-    Seen
+  <a class="stat is-progress {% if request.GET.status == 'in_progress' %}is-active{% endif %}" href="?status=in_progress">
+    <span class="stat-label">{% icon 'wrench' %}In progress</span><span class="stat-value">{{ stats.in_progress }}</span>
   </a>
-  <a href="?status=resolved"
-     class="btn btn-sm {% if status_filter == 'resolved' %}btn-success{% else %}btn-outline-success{% endif %}">
-    Resolved
+  <a class="stat is-ok {% if request.GET.status == 'resolved' %}is-active{% endif %}" href="?status=resolved">
+    <span class="stat-label">{% icon 'check-circle' %}Resolved</span><span class="stat-value">{{ stats.resolved }}</span>
   </a>
-</div>
+  <a class="stat is-danger {% if request.GET.status == 'rejected' %}is-active{% endif %}" href="?status=rejected">
+    <span class="stat-label">{% icon 'x-circle' %}Rejected</span><span class="stat-value">{{ stats.rejected }}</span>
+  </a>
+  <a class="stat is-warn" href="?status=open&amp;ordering=-priority" title="Open complaints, highest priority first">
+    <span class="stat-label">{% icon 'flag' %}High priority open</span><span class="stat-value">{{ stats.urgent_open }}</span>
+  </a>
+</section>
 
-<!-- Messages -->
-{% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-  {% endfor %}
-{% endif %}
+{% include "complaints/_filter_bar.html" with show_ward=True show_priority=True show_assigned=True %}
 
-<!-- Complaints table -->
-{% if complaints %}
-<div class="table-responsive">
-<table class="table table-hover align-middle">
-  <thead class="table-light">
-    <tr>
-      <th>#</th>
-      <th>Photo</th>
-      <th>Issue</th>
-      <th>Citizen</th>
-      <th>Location</th>
-      <th>Date</th>
-      <th>Status</th>
-      <th>Update</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for complaint in complaints %}
-    <tr>
-      <td>{{ complaint.id }}</td>
-
-      <!-- Thumbnail -->
-      <td>
-        {% if complaint.image %}
-          <img src="{{ complaint.image.url }}"
-               style="width:50px;height:50px;object-fit:cover;border-radius:6px;">
-        {% else %}
-          <span class="text-muted">📷</span>
-        {% endif %}
-      </td>
-
-      <td>
-        <strong>{{ complaint.get_issue_type_display }}</strong><br>
-        <small class="text-muted">{{ complaint.description|truncatechars:40 }}</small>
-      </td>
-
-      <td>{{ complaint.user.username }}</td>
-
-      <!-- GPS -->
-      <td>
-        {% if complaint.latitude != 0.0 %}
-          <a href="https://maps.google.com/?q={{ complaint.latitude }},{{ complaint.longitude }}"
-             target="_blank" class="btn btn-outline-secondary btn-sm">
-            📍 Map
-          </a>
-        {% else %}
-          <span class="text-muted small">No GPS</span>
-        {% endif %}
-      </td>
-
-      <td>
-        <small>{{ complaint.created_at|date:"d M Y" }}<br>
-        {{ complaint.created_at|date:"H:i" }}</small>
-      </td>
-
-      <!-- Status badge -->
-      <td>
-        {% if complaint.status == 'submitted' %}
-          <span class="badge bg-warning text-dark">Submitted</span>
-        {% elif complaint.status == 'seen' %}
-          <span class="badge bg-info">Seen</span>
-        {% else %}
-          <span class="badge bg-success">Resolved</span>
-        {% endif %}
-      </td>
-
-      <!-- Update status form -->
-      <td>
-        <form method="post"
-              action="{% url 'update-status' complaint.pk %}">
-          {% csrf_token %}
-          <select name="status" class="form-select form-select-sm"
-                  style="width:120px;display:inline-block"
-                  onchange="this.form.submit()">
-            <option value="submitted"
-              {% if complaint.status == 'submitted' %}selected{% endif %}>
-              Submitted
-            </option>
-            <option value="seen"
-              {% if complaint.status == 'seen' %}selected{% endif %}>
-              Seen
-            </option>
-            <option value="resolved"
-              {% if complaint.status == 'resolved' %}selected{% endif %}>
-              Resolved
-            </option>
-          </select>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
-
-{% else %}
-  <div class="text-center py-5">
-    <span style="font-size:48px">📭</span>
-    <p class="text-muted mt-2">No complaints found.</p>
+<section class="card mb-3" aria-labelledby="queue-heading">
+  <div class="card-head">
+    <h2 id="queue-heading">{% icon 'inbox' %} Complaints</h2>
+    <span class="small muted" aria-live="polite">{{ page_obj.paginator.count }} result{{ page_obj.paginator.count|pluralize }}{% if page_obj.paginator.num_pages > 1 %} · page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}{% endif %}</span>
   </div>
-{% endif %}
 
+  {% if complaints %}
+  <div class="table-wrap">
+    <table class="data responsive">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Complaint</th>
+          <th scope="col">Ward</th>
+          <th scope="col">Priority</th>
+          <th scope="col">Age</th>
+          <th scope="col" title="Residents affected">Votes</th>
+          <th scope="col">Status</th>
+          <th scope="col">Quick action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr>
+          <td data-label="ID" class="mono"><a href="{{ c.get_absolute_url }}">{{ c.pk }}</a></td>
+          <td class="cell-title">
+            <a href="{{ c.get_absolute_url }}">{{ c.headline|truncatechars:54 }}</a>
+            <div class="tiny muted row" style="gap:.35rem">{% issue_icon c.issue_type %}{{ c.get_issue_type_display }}
+              · {% if c.assigned_to %}{% icon 'user' %}{{ c.assigned_to.display_name }}{% else %}<em>Unassigned</em>{% endif %}</div>
+          </td>
+          <td data-label="Ward" class="small">{% if c.ward %}{{ c.ward.name }}{% else %}<span class="badge warn">Unrouted</span>{% endif %}</td>
+          <td data-label="Priority">{% priority_indicator c.priority %}</td>
+          <td data-label="Age" class="mono nowrap" title="Filed {{ c.created_at|date:'d M Y' }}">{{ c.age_days }}d</td>
+          <td data-label="Votes" class="mono">{{ c.upvote_count }}</td>
+          <td data-label="Status">{% status_badge c.status %}</td>
+          <td data-label="Action">
+            {% if c.allowed_next_choices %}
+              <form method="post" action="{% url 'update-status' c.pk %}" class="row-actions" data-busy-form>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <label class="visually-hidden" for="status-{{ c.pk }}">New status for complaint {{ c.pk }}</label>
+                <select name="status" id="status-{{ c.pk }}" class="field-input sm">
+                  {% for value, label in c.allowed_next_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="btn sm"><span class="spinner" aria-hidden="true"></span>Set</button>
+              </form>
+            {% else %}
+              <span class="muted tiny">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">{% if has_filters %}{% icon 'search' %}{% else %}{% icon 'check-circle' %}{% endif %}</div>
+      <h3>{% if has_filters %}No complaints match these filters{% else %}Nothing in the queue{% endif %}</h3>
+      <p>{% if has_filters %}Try widening the filters.{% else %}New reports from your ward will appear here as citizens file them.{% endif %}</p>
+      {% if has_filters %}<a class="btn secondary" href="{% url 'corporator-dashboard' %}">Clear filters</a>{% endif %}
+    </div>
+  {% endif %}
+</section>
+{% include "partials/pagination.html" %}
+
+<div class="grid grid-2 mt-3">
+  <section class="card" aria-labelledby="breakdown-heading">
+    <div class="card-head"><h2 id="breakdown-heading">{% icon 'chart' %} By issue type</h2></div>
+    <div class="card-body">
+      {% if breakdown %}
+        <div class="bars">
+          {% for row in breakdown %}
+            <a class="bar-row" href="?issue_type={{ row.key }}" style="color:inherit;text-decoration:none">
+              <span class="bar-label">{% issue_icon row.key %}{{ row.label }}</span>
+              <span class="bar-track" role="img" aria-label="{{ row.count }} of {{ stats.total }}"><span class="bar-fill" data-width="{{ row.count|percent_of:stats.total }}"></span></span>
+              <span class="bar-count">{{ row.count }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted small mb-0">Nothing to chart yet.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="activity-heading">
+    <div class="card-head"><h2 id="activity-heading">{% icon 'activity' %} Recent activity</h2></div>
+    <div class="card-body">
+      {% if activity %}
+        <ol class="timeline">
+          {% for entry in activity %}
+            <li>
+              {% if entry.is_status_change %}
+                <span class="t-dot {{ entry.new_status|status_tone }}">{% icon entry.new_status|status_icon_name %}</span>
+                <div class="t-title"><a href="{{ entry.complaint.get_absolute_url }}">#{{ entry.complaint_id }}</a>
+                  {% if entry.old_status %}{{ entry.get_old_status_display }} → {{ entry.get_new_status_display }}{% else %}filed{% endif %}</div>
+              {% else %}
+                <span class="t-dot">{% icon entry.kind|event_icon_name %}</span>
+                <div class="t-title"><a href="{{ entry.complaint.get_absolute_url }}">#{{ entry.complaint_id }}</a> {{ entry.note|truncatechars:60 }}</div>
+              {% endif %}
+              <div class="t-meta">{{ entry.created_at|timesince }} ago{% if entry.changed_by %} · {{ entry.changed_by.display_name }}{% endif %}</div>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="muted small mb-0">No activity yet.</p>
+      {% endif %}
+    </div>
+  </section>
+</div>
 {% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load complaint_extras %}
+{% block title %}Dashboard — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Citizen dashboard</div>
+    <h1>Namaste, {{ user.first_name|default:user.username }}</h1>
+    <p>{% if user.ward %}{{ user.ward }}{% else %}Set your home ward in your profile to follow your neighbourhood.{% endif %}</p>
+  </div>
+  <a class="btn lg" href="{% url 'complaint-create' %}">{% icon 'camera' %}Report an issue</a>
+</div>
+
+{% if not user.email_verified and user.email %}
+  <div class="alert warning">{% icon 'mail' %}<div>Confirm <strong>{{ user.email }}</strong> to get email updates on your complaints.
+    <a href="{% url 'profile' %}">Resend the link</a>.</div></div>
+{% endif %}
+
+<section aria-label="Your complaint statistics" class="stats mb-3">
+  <a class="stat" href="{% url 'complaint-list' %}"><span class="stat-label">{% icon 'list' %}Total reported</span><span class="stat-value">{{ stats.total }}</span></a>
+  <a class="stat is-warn" href="{% url 'complaint-list' %}?status=submitted"><span class="stat-label">{% icon 'inbox' %}Submitted</span><span class="stat-value">{{ stats.submitted }}</span></a>
+  <a class="stat is-info" href="{% url 'complaint-list' %}?status=seen"><span class="stat-label">{% icon 'eye' %}Acknowledged</span><span class="stat-value">{{ stats.seen }}</span></a>
+  <a class="stat is-progress" href="{% url 'complaint-list' %}?status=in_progress"><span class="stat-label">{% icon 'wrench' %}In progress</span><span class="stat-value">{{ stats.in_progress }}</span></a>
+  <a class="stat is-ok" href="{% url 'complaint-list' %}?status=resolved"><span class="stat-label">{% icon 'check-circle' %}Resolved</span><span class="stat-value">{{ stats.resolved }}</span></a>
+  <a class="stat is-danger" href="{% url 'complaint-list' %}?status=rejected"><span class="stat-label">{% icon 'x-circle' %}Rejected</span><span class="stat-value">{{ stats.rejected }}</span></a>
+</section>
+
+<div class="split">
+  <section class="card" aria-labelledby="recent-heading">
+    <div class="card-head">
+      <h2 id="recent-heading">{% icon 'clock' %} Your recent complaints</h2>
+      {% if recent %}<a class="small" href="{% url 'complaint-list' %}">View all {% icon 'arrow-right' %}</a>{% endif %}
+    </div>
+    {% if recent %}
+      <ul class="list-rows">
+        {% for c in recent %}
+          <li class="list-row">
+            <a class="list-thumb" href="{{ c.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+              {% if c.thumbnail %}<img src="{{ c.thumbnail.url }}" alt="" loading="lazy">{% else %}{% issue_icon c.issue_type 'icon-lg' %}{% endif %}
+            </a>
+            <div class="list-main">
+              <a class="truncate" style="display:block" href="{{ c.get_absolute_url }}">{{ c.headline }}</a>
+              <div class="tiny muted">
+                <span class="mono">#{{ c.pk }}</span> · {{ c.get_issue_type_display }} · {{ c.created_at|date:"d M Y" }}
+                {% if c.address %} · {{ c.address|truncatechars:32 }}{% endif %}
+              </div>
+            </div>
+            {% status_badge c.status %}
+            <a class="btn ghost sm" href="{{ c.get_absolute_url }}" aria-label="Open complaint #{{ c.pk }}">{% icon 'chevron-right' %}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">{% icon 'camera' %}</div>
+        <h3>You haven't reported any civic issues yet.</h3>
+        <p>Spotted a pothole, an overflowing bin or a dark streetlight? Report it with a photo and your location,
+          and follow it until it is fixed.</p>
+        <a class="btn" href="{% url 'complaint-create' %}">{% icon 'plus' %}Report your first issue</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <aside class="stack">
+    <section class="card" aria-labelledby="ward-heading">
+      <div class="card-head">
+        <h2 id="ward-heading">{% icon 'users' %} In your ward</h2>
+        {% if user.ward %}<a class="small" href="{% url 'complaint-list' %}?scope=ward">See all</a>{% endif %}
+      </div>
+      {% if not user.ward %}
+        <div class="empty compact">
+          <p class="small">Choose your home ward to see open issues your neighbours have reported and add your support.</p>
+          <a class="btn secondary sm" href="{% url 'profile' %}">Set my ward</a>
+        </div>
+      {% elif ward_feed %}
+        <ul class="list-rows">
+          {% for c in ward_feed %}
+            <li class="list-row">
+              <div class="list-main">
+                <a class="truncate" style="display:block" href="{{ c.get_absolute_url }}">{{ c.headline }}</a>
+                <div class="tiny muted">{{ c.get_issue_type_display }} · {{ c.get_status_display }}</div>
+              </div>
+              <span class="upvote-static" title="Residents affected">{% icon 'users' %}{{ c.upvote_count }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty compact"><p class="small mb-0">No open reports from your neighbours right now.</p></div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-body">
+        <h3 class="row">{% icon 'info' %} What happens next?</h3>
+        <p class="small muted mb-1">Your ward office acknowledges the report, starts work, and marks it resolved — or explains
+          why it was rejected. Every step appears on the complaint's timeline.</p>
+        <a class="small" href="{% url 'complaint-map' %}">{% icon 'map' %} See reports on the map</a>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

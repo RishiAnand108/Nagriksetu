@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load complaint_extras %}
+{% block title %}Your profile — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="row" style="gap:1rem">
+    <span class="avatar{% if is_corporator %} official{% endif %}" style="width:56px;height:56px;font-size:1.1rem">{{ user|initials }}</span>
+    <div>
+      <h1>{{ user.display_name }}</h1>
+      <p>@{{ user.username }} · {% if is_corporator %}Ward official{% else %}Citizen{% endif %} · member since {{ user.date_joined|date:"M Y" }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="card">
+    <div class="card-head"><h2>{% icon 'user' %} Account details</h2></div>
+    <div class="card-body">
+      <form method="post" novalidate data-busy-form>
+        {% csrf_token %}
+        {% include "partials/form_errors.html" %}
+        <div class="grid grid-2">
+          {% include "partials/field.html" with field=form.first_name %}
+          {% include "partials/field.html" with field=form.last_name %}
+        </div>
+        {% include "partials/field.html" with field=form.email %}
+        <div class="grid grid-2">
+          {% include "partials/field.html" with field=form.phone %}
+          {% include "partials/field.html" with field=form.ward %}
+        </div>
+
+        <fieldset class="field" style="border:0;padding:0;margin:0 0 1.1rem">
+          <legend class="field-label">Notifications</legend>
+          <div class="checkbox-row">
+            {{ form.notify_by_email }}
+            <label for="{{ form.notify_by_email.id_for_label }}">
+              {{ form.notify_by_email.label }}
+              <span class="field-help" style="display:block;margin:0">Status changes and official replies on complaints you reported.</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button type="submit" class="btn"><span class="spinner" aria-hidden="true"></span>Save changes</button>
+          <a class="btn ghost" href="{% url 'password_reset' %}">{% icon 'lock' %}Change password</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>{% icon 'mail' %} Email status</h2></div>
+      <div class="card-body">
+        {% if not user.email %}
+          <div class="alert info mb-0">{% icon 'info' %}<div>Add an email address to receive updates about your complaints.</div></div>
+        {% elif user.email_verified %}
+          <div class="alert success mb-0">{% icon 'check-circle' %}<div><strong>{{ user.email }}</strong> is confirmed.
+            {% if not user.notify_by_email %}Email updates are switched off.{% endif %}</div></div>
+        {% else %}
+          <div class="alert warning">{% icon 'alert' %}<div><strong>{{ user.email }}</strong> is not confirmed yet. We only send
+            updates to confirmed addresses.</div></div>
+          <form method="post" action="{% url 'resend-verification' %}" data-busy-form>
+            {% csrf_token %}
+            <button class="btn secondary block" type="submit"><span class="spinner" aria-hidden="true"></span>{% icon 'send' %}Resend confirmation link</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>{% icon 'landmark' %} {% if is_corporator %}Jurisdiction{% else %}Your ward{% endif %}</h2></div>
+      <div class="card-body">
+        {% if is_corporator %}
+          <p class="mb-1 strong">{% if user.ward %}{{ user.ward }}{% else %}City-wide officer{% endif %}</p>
+          <p class="small muted mb-0">
+            {% if user.ward %}You manage complaints in this ward and complaints not yet routed to any ward.
+            {% else %}You can see and route complaints in every ward.{% endif %}
+          </p>
+        {% elif user.ward %}
+          <p class="mb-1 strong">{{ user.ward }}</p>
+          <p class="small muted mb-0">You can see and support other residents' reports from this ward.</p>
+        {% else %}
+          <p class="small muted mb-0">Set your home ward to see what neighbours have reported and add your support.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if not is_corporator %}
+    <div class="stats">
+      <div class="stat"><span class="stat-label">Reported</span><span class="stat-value">{{ stats.total }}</span></div>
+      <div class="stat is-progress"><span class="stat-label">Open</span><span class="stat-value">{{ stats.open }}</span></div>
+      <div class="stat is-ok"><span class="stat-label">Resolved</span><span class="stat-value">{{ stats.resolved }}</span></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
