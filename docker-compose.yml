@@ -1,0 +1,78 @@
+# Local full stack: Django (Gunicorn) + Celery worker + PostgreSQL + Redis.
+#
+#   cp .env.example .env        # then set SECRET_KEY (see the comment in that file)
+#   docker compose up --build
+#   docker compose exec web python manage.py createsuperuser
+#
+# Open http://localhost:8000. This runs the *production* settings over plain
+# HTTP, so HTTPS-only cookies/redirects are relaxed via the variables below.
+# Do not use these overrides on a public deployment.
+
+x-app-env: &app-env
+  DJANGO_ENV: prod
+  SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env - see .env.example}
+  ALLOWED_HOSTS: localhost,127.0.0.1
+  CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
+  SITE_URL: http://localhost:8000
+  DATABASE_URL: postgres://nagriksetu:nagriksetu@db:5432/nagriksetu
+  CELERY_BROKER_URL: redis://redis:6379/0
+  REDIS_URL: redis://redis:6379/1
+  SECURE_SSL_REDIRECT: "False"
+  SECURE_COOKIES: "False"
+  SECURE_HSTS_SECONDS: "0"
+  TRUST_X_FORWARDED_FOR: "False"
+  # Single host, shared volume: Django may serve uploaded media itself here.
+  SERVE_MEDIA_FROM_APP: "True"
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: nagriksetu
+      POSTGRES_USER: nagriksetu
+      POSTGRES_PASSWORD: nagriksetu
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nagriksetu -d nagriksetu"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 3 --timeout 60 --access-logfile -"
+    environment: *app-env
+    ports:
+      - "8000:8000"
+    volumes:
+      - media:/app/media
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  worker:
+    build: .
+    command: celery -A config worker --loglevel=info --concurrency=2
+    environment: *app-env
+    volumes:
+      - media:/app/media   # the worker writes processed photos here
+    healthcheck:
+      disable: true
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  media:

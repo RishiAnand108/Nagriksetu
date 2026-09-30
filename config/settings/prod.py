@@ -31,10 +31,12 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 # ── Cookies ───────────────────────────────────────────────
-SESSION_COOKIE_SECURE = True
+# Only ever turned off for the local docker-compose stack, which serves plain HTTP.
+SECURE_COOKIES = config('SECURE_COOKIES', default=True, cast=bool)
+SESSION_COOKIE_SECURE = SECURE_COOKIES
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = SECURE_COOKIES
 CSRF_COOKIE_HTTPONLY = False  # the fetch() helper in static/js/app.js reads it
 CSRF_COOKIE_SAMESITE = 'Lax'
 

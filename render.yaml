@@ -1,21 +1,33 @@
+# Render blueprint: web service + managed PostgreSQL.
+#
+# With no CELERY_BROKER_URL, photo processing and emails run inline in the web
+# process — no worker is deployed by default, because Render background
+# workers are not on the free plan. To run the worker, uncomment the Key Value
+# (Redis) instance and the worker service below and set CELERY_BROKER_URL on
+# both services.
+#
+# Uploaded photos need persistent storage: set the AWS_* variables to an
+# S3-compatible bucket (Cloudflare R2 has a free tier). For a throwaway demo
+# only, SERVE_MEDIA_FROM_APP=True serves them from the instance's disk, which
+# is wiped on every deploy.
 services:
   - type: web
     name: nagriksetu
     runtime: python
     plan: free
     buildCommand: ./build.sh
-    startCommand: gunicorn config.wsgi --log-file - --workers 3 --timeout 60
+    startCommand: gunicorn config.wsgi --workers 3 --timeout 60 --access-logfile -
     healthCheckPath: /healthz/
     envVars:
       - key: DJANGO_ENV
         value: prod
       - key: SECRET_KEY
         generateValue: true
-      - key: DEBUG
-        value: "False"
       - key: ALLOWED_HOSTS
         value: nagriksetu.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
+        value: https://nagriksetu.onrender.com
+      - key: SITE_URL
         value: https://nagriksetu.onrender.com
       - key: PYTHON_VERSION
         value: 3.13.0
@@ -23,6 +35,42 @@ services:
         fromDatabase:
           name: nagriksetu-db
           property: connectionString
+      # Object storage for uploads (set in the dashboard; never committed).
+      - key: AWS_STORAGE_BUCKET_NAME
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: AWS_S3_CUSTOM_DOMAIN
+        sync: false
+      # Email (optional; console backend when unset).
+      - key: EMAIL_BACKEND
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+
+  # - type: keyvalue
+  #   name: nagriksetu-redis
+  #   plan: free
+  #   ipAllowList: []
+  #
+  # - type: worker
+  #   name: nagriksetu-worker
+  #   runtime: python
+  #   plan: starter
+  #   buildCommand: pip install -r requirements.txt
+  #   startCommand: celery -A config worker --loglevel=info --concurrency=2
+  #   envVars:
+  #     - fromGroup: …  # same DJANGO_ENV / SECRET_KEY / DATABASE_URL / AWS_* as the web service
+  #     - key: CELERY_BROKER_URL
+  #       fromService: { type: keyvalue, name: nagriksetu-redis, property: connectionString }
 
 databases:
   - name: nagriksetu-db
