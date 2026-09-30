@@ -147,11 +147,11 @@ class LogoutAPIView(TokenBlacklistView):
     pass
 
 
-@extend_schema(deprecated=True, summary='Deprecated alias of /api/auth/token/')
+@extend_schema(deprecated=True, tags=['auth'], summary='Deprecated alias of /api/auth/token/')
 class LegacyLoginAPIView(LoginAPIView):
     pass
 
 
-@extend_schema(deprecated=True, summary='Deprecated alias of /api/auth/token/refresh/')
+@extend_schema(deprecated=True, tags=['auth'], summary='Deprecated alias of /api/auth/token/refresh/')
 class LegacyRefreshAPIView(RefreshAPIView):
     pass

@@ -7,6 +7,8 @@ One error shape for the whole API.
 `errors` appears only for validation failures and maps field names (or
 "non_field_errors") to lists of messages, exactly as DRF produces them.
 """
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from rest_framework import status
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.views import exception_handler
@@ -49,6 +51,14 @@ def api_exception_handler(exc, context):
             'code': 'invalid',
             'errors': errors,
         }
+        return response
+
+    # DRF converts Django's own exceptions; give them the codes DRF would use.
+    if isinstance(exc, Http404):
+        response.data = {'detail': 'Not found.', 'code': 'not_found'}
+        return response
+    if isinstance(exc, PermissionDenied):
+        response.data = {'detail': 'You do not have permission to perform this action.', 'code': 'permission_denied'}
         return response
 
     codes = exc.get_codes() if hasattr(exc, 'get_codes') else None
